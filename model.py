@@ -118,7 +118,7 @@ class PixelCNN(nn.Module):
         self.nin_out = nin(nr_filters, num_mix * nr_logistic_mix)
         self.init_padding = None
 
-        self.embedding = nn.Embedding(4, 1024)
+        self.embedding = nn.Embedding(4, 64)
         self.embedding = self.embedding.to(torch.device('cuda')) if torch.cuda.is_available() else self.embedding
         self.embedding = self.embedding.to(torch.device("mps")) if torch.backends.mps.is_available() else self.embedding
 
@@ -150,9 +150,10 @@ class PixelCNN(nn.Module):
         the decoder weight matrix Wdec ∈ Rdmodelxdout decodes each token from a high-dimensional space into the output space.
 '''
 
-        embedding = self.embedding(labels)
-        embedding = embedding.to(x.device)
-        x = torch.reshape(embedding.unsqueeze(1).repeat(1,x.shape[1],1), x.shape) + x
+        # embedding = self.embedding(labels)
+        # embedding = embedding.to(x.device)
+        # print(embedding.shape)
+        # x = torch.reshape(embedding.unsqueeze(1).repeat(1,x.shape[1],1), x.shape) + x
 
         # label_embeddings = self.ape.forward(labels)
         # label_embeddings = label_embeddings.to(x.device)
@@ -190,6 +191,10 @@ class PixelCNN(nn.Module):
         ###    DOWN PASS    ###
         u  = u_list.pop()
         ul = ul_list.pop()
+
+        embedding = self.embedding(labels)
+        u = u + torch.reshape(embedding.unsqueeze(1).repeat(1,u.shape[1],1), u.shape)
+        ul = ul + torch.reshape(embedding.unsqueeze(1).repeat(1,ul.shape[1],1), ul.shape)
 
         for i in range(3):
             # resnet block
