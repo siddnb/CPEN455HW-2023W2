@@ -24,6 +24,8 @@ def get_label(model, model_input, device):
     # Get the index of the maximum value for each batch
     # Return the index as a tensor of shape (batch_size,)
     answers = None
+    
+    # Used github copilot in this function
     for _, label_num in my_bidict.items():
         categories = torch.tensor([label_num]*model_input.shape[0]).to(device)
         categories = categories.to(device)
