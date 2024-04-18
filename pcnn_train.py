@@ -192,8 +192,8 @@ if __name__ == '__main__':
         model.load_state_dict(torch.load(args.load_params))
         print('model parameters loaded')
 
-    # optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    optimizer = optim.SGD(model.parameters(), lr=args.lr)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    # optimizer = optim.SGD(model.parameters(), lr=args.lr)
     scheduler = lr_scheduler.StepLR(optimizer, step_size=1, gamma=args.lr_decay)
     
     for epoch in tqdm(range(args.max_epochs)):
