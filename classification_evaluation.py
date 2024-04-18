@@ -29,7 +29,6 @@ def get_label(model, model_input, device):
         categories = categories.to(device)
         
         model_output = model(model_input, categories)
-        print(model_output)
         answer = image_discretized_mix_logistic_loss(model_input, model_output)
 
         # CHANGE TO PASS INTO LOSS FUNCTION FOR EACH IMAGE
@@ -40,7 +39,7 @@ def get_label(model, model_input, device):
         else:
             answers = torch.cat((answers, answer.unsqueeze(1)), dim=1)
     print(answers)
-    answer = torch.argmax(answers, dim=1).squeeze(1)
+    answer = torch.argmax(answers, dim=1)
     # print(answer)
 
     return answer

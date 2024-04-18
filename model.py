@@ -118,9 +118,9 @@ class PixelCNN(nn.Module):
         self.nin_out = nin(nr_filters, num_mix * nr_logistic_mix)
         self.init_padding = None
 
-        # self.embedding = nn.Embedding(4, 32)
-        # self.embedding = self.embedding.to(torch.device('cuda')) if torch.cuda.is_available() else self.embedding
-        # self.embedding = self.embedding.to(torch.device("mps")) if torch.backends.mps.is_available() else self.embedding
+        self.embedding = nn.Embedding(4, 1024)
+        self.embedding = self.embedding.to(torch.device('cuda')) if torch.cuda.is_available() else self.embedding
+        self.embedding = self.embedding.to(torch.device("mps")) if torch.backends.mps.is_available() else self.embedding
 
         self.ape = AbsolutePositionalEncoding(d_model=3)
 
@@ -150,14 +150,13 @@ class PixelCNN(nn.Module):
         the decoder weight matrix Wdec ∈ Rdmodelxdout decodes each token from a high-dimensional space into the output space.
 '''
 
-        # embedding = self.embedding(labels)
-        # embedding = embedding.to(x.device)
+        embedding = self.embedding(labels)
+        embedding = embedding.to(x.device)
+        x = torch.reshape(embedding.unsqueeze(1).repeat(1,x.shape[1],1), x.shape) + x
 
-        # x = embedding.unsqueeze(1).unsqueeze(2).expand_as(x) + x
-
-        label_embeddings = self.ape.forward(labels)
-        label_embeddings = label_embeddings.to(x.device)
-        x = x + label_embeddings.unsqueeze(2).unsqueeze(3)
+        # label_embeddings = self.ape.forward(labels)
+        # label_embeddings = label_embeddings.to(x.device)
+        # x = x + label_embeddings.unsqueeze(2).unsqueeze(3)
         
         # similar as done in the tf repo :
         if self.init_padding is not sample:

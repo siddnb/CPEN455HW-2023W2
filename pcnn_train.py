@@ -235,6 +235,7 @@ if __name__ == '__main__':
                 end_idx = start_idx + args.sample_batch_size//4
                 labels[start_idx:end_idx] = i
 
+            labels = labels.to(device)
             sample_t = sample(model, labels, args.sample_batch_size, args.obs, sample_op)
             sample_t = rescaling_inv(sample_t)
             save_images(sample_t, args.sample_dir)
