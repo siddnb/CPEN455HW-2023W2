@@ -39,7 +39,7 @@ def get_label(model, model_input, device):
         else:
             answers = torch.cat((answers, answer.unsqueeze(1)), dim=1)
     print(answers)
-    answer = torch.argmax(answers, dim=1)
+    answer = torch.argmin(answers, dim=1)
     # print(answer)
 
     return answer
