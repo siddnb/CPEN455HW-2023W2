@@ -31,7 +31,7 @@ python3 pcnn_train.py \
 --sampling_interval 20 \
 --save_interval 50 \
 --dataset cpen455 \
---nr_resnet 2 \
+--nr_resnet 1 \
 --nr_filters 20 \
 --nr_logistic_mix 5 \
 --lr 0.0002 \
