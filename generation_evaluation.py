@@ -20,7 +20,9 @@ def my_sample(model, gen_data_dir, sample_batch_size = 25, obs = (3,32,32), samp
     for label in my_bidict:
         print(f"Label: {label}")
         #generate images for each label, each label has 25 images
-        sample_t = sample(model, sample_batch_size, obs, sample_op)
+        labels = torch.tensor([label]*sample_batch_size)
+        labels = labels.to(device)
+        sample_t = sample(model, labels, sample_batch_size, obs, sample_op)
         sample_t = rescaling_inv(sample_t)
         save_images(sample_t, os.path.join(gen_data_dir), label=label)
     pass
@@ -31,6 +33,7 @@ if __name__ == "__main__":
     gen_data_dir = "samples"
     BATCH_SIZE=128
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "mps" if torch.backends.mps.is_available() else device
     
     if not os.path.exists(gen_data_dir):
         os.makedirs(gen_data_dir)

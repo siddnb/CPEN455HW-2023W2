@@ -1,5 +1,6 @@
 import torch.nn as nn
 from layers import *
+from dataset import *
 
 
 class PixelCNNLayer_up(nn.Module):
@@ -49,6 +50,27 @@ class PixelCNNLayer_down(nn.Module):
 
         return u, ul
 
+class AbsolutePositionalEncoding(nn.Module):
+    MAX_LEN = 1024
+    def __init__(self, d_model):
+        super().__init__()
+        self.W = nn.Parameter(torch.empty((self.MAX_LEN, d_model)))
+        nn.init.normal_(self.W)
+
+    def forward(self, x):
+        """
+        args:
+            x: shape B
+        returns:
+            out: shape B x C
+        """
+        to_add = self.W[:x.shape[0]]
+        to_add = to_add.to(x.device)
+        out = x.unsqueeze(1)+to_add
+
+        out.to(x.device)
+
+        return out
 
 class PixelCNN(nn.Module):
     def __init__(self, nr_resnet=5, nr_filters=80, nr_logistic_mix=10,
@@ -96,18 +118,59 @@ class PixelCNN(nn.Module):
         self.nin_out = nin(nr_filters, num_mix * nr_logistic_mix)
         self.init_padding = None
 
+        # self.embedding = nn.Embedding(4, 32)
+        # self.embedding = self.embedding.to(torch.device('cuda')) if torch.cuda.is_available() else self.embedding
+        # self.embedding = self.embedding.to(torch.device("mps")) if torch.backends.mps.is_available() else self.embedding
 
-    def forward(self, x, sample=False):
+        self.ape = AbsolutePositionalEncoding(d_model=3)
+
+    def forward(self, x, labels, sample=False):
+        # ENSURE LABELS IS A TENSOR OF INTS
+
+        # OPTION 1: Add labels to input x
+        # # Convert labels to a tensor of the same shape as input x)
+        # label_tensor = labels.unsqueeze(1).unsqueeze(2).unsqueeze(3).expand_as(x)
+        # label_tensor = label_tensor.to(x.device)
+        # # Normalize label tensor if necessary 
+        # # label_tensor = label_tensor / 3  
+
+        # # Element-wise addition of label tensor to each channel of input x
+        # x = x + label_tensor
+
+        # OPTION 2: add APE
+        '''
+        "Absolute encoding can be just a learnable embedding matrix indicated by nn.Embedding(sequence_length, hidden_dim), 
+        where each time step is randomly initialized and the neural network will learn the best representation for them"
+        https://medium.com/@ngiengkianyew/explaining-the-need-for-positional-encodings-in-transformers-db4209d4be10#:~:
+        text=Absolute%20positional%20encoding%20just%20involves,the%20position%20of%20the%20word.
+        '''
+
+        '''The encoder weight Wenc ∈ Rdinputxdmodel is a linear layer that takes in tokens of dimension dinput = dvocab and 
+        encodes each of them into a high-dimensional space of dmodel. After applying the required layers of the Transformer layer, 
+        the decoder weight matrix Wdec ∈ Rdmodelxdout decodes each token from a high-dimensional space into the output space.
+'''
+
+        # embedding = self.embedding(labels)
+        # embedding = embedding.to(x.device)
+
+        # x = embedding.unsqueeze(1).unsqueeze(2).expand_as(x) + x
+
+        label_embeddings = self.ape.forward(labels)
+        label_embeddings = label_embeddings.to(x.device)
+        x = x + label_embeddings.unsqueeze(2).unsqueeze(3)
+        
         # similar as done in the tf repo :
         if self.init_padding is not sample:
             xs = [int(y) for y in x.size()]
             padding = Variable(torch.ones(xs[0], 1, xs[2], xs[3]), requires_grad=False)
             self.init_padding = padding.cuda() if x.is_cuda else padding
+            self.init_padding = padding.to(x.device) if x.is_mps else padding
 
         if sample :
             xs = [int(y) for y in x.size()]
             padding = Variable(torch.ones(xs[0], 1, xs[2], xs[3]), requires_grad=False)
             padding = padding.cuda() if x.is_cuda else padding
+            padding = padding.to(x.device) if x.is_mps else padding
             x = torch.cat((x, padding), 1)
 
         ###      UP PASS    ###
@@ -140,6 +203,8 @@ class PixelCNN(nn.Module):
 
         x_out = self.nin_out(F.elu(ul))
 
+        # Add absolute encoding
+        # x_out = self.ape.forward(x_out)
         assert len(u_list) == len(ul_list) == 0, pdb.set_trace()
 
         return x_out

@@ -12,7 +12,7 @@ from tqdm import tqdm
 from pprint import pprint
 import argparse
 from pytorch_fid.fid_score import calculate_fid_given_paths
-
+from classification_evaluation import classifier
 
 def train_or_test(model, data_loader, optimizer, loss_op, device, args, epoch, mode = 'training'):
     if mode == 'training':
@@ -24,9 +24,13 @@ def train_or_test(model, data_loader, optimizer, loss_op, device, args, epoch, m
     loss_tracker = mean_tracker()
     
     for batch_idx, item in enumerate(tqdm(data_loader)):
-        model_input, _ = item
+        model_input, labels = item
+        labels = torch.tensor([int(x[-1]) for x in labels])
+        
         model_input = model_input.to(device)
-        model_output = model(model_input)
+        labels = labels.to(device)
+
+        model_output = model(model_input, labels)
         loss = loss_op(model_input, model_output)
         loss_tracker.update(loss.item()/deno)
         if mode == 'training':
@@ -37,6 +41,8 @@ def train_or_test(model, data_loader, optimizer, loss_op, device, args, epoch, m
     if args.en_wandb:
         wandb.log({mode + "-Average-BPD" : loss_tracker.get_mean()})
         wandb.log({mode + "-epoch": epoch})
+        acc = classifier(model = model, data_loader = data_loader, device = device)
+        wandb.log({mode + "-acc": acc})
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -119,7 +125,8 @@ if __name__ == '__main__':
 
     #set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    kwargs = {'num_workers':1, 'pin_memory':True, 'drop_last':True}
+    device = torch.device("mps" if torch.backends.mps.is_available() else device)
+    kwargs = {'num_workers':0, 'pin_memory':True, 'drop_last':True}
 
     # set data
     if "mnist" in args.dataset:
@@ -200,14 +207,14 @@ if __name__ == '__main__':
         
         # decrease learning rate
         scheduler.step()
-        train_or_test(model = model,
-                      data_loader = test_loader,
-                      optimizer = optimizer,
-                      loss_op = loss_op,
-                      device = device,
-                      args = args,
-                      epoch = epoch,
-                      mode = 'test')
+        # train_or_test(model = model,
+        #               data_loader = test_loader,
+        #               optimizer = optimizer,
+        #               loss_op = loss_op,
+        #               device = device,
+        #               args = args,
+        #               epoch = epoch,
+        #               mode = 'test')
         
         train_or_test(model = model,
                       data_loader = val_loader,
@@ -220,7 +227,15 @@ if __name__ == '__main__':
         
         if epoch % args.sampling_interval == 0:
             print('......sampling......')
-            sample_t = sample(model, args.sample_batch_size, args.obs, sample_op)
+            labels = torch.zeros(args.sample_batch_size, dtype=torch.int32)
+    
+            # Fill the tensor with the desired pattern
+            for i in range(4):
+                start_idx = i * args.sample_batch_size//4
+                end_idx = start_idx + args.sample_batch_size//4
+                labels[start_idx:end_idx] = i
+
+            sample_t = sample(model, labels, args.sample_batch_size, args.obs, sample_op)
             sample_t = rescaling_inv(sample_t)
             save_images(sample_t, args.sample_dir)
             sample_result = wandb.Image(sample_t, caption="epoch {}".format(epoch))
