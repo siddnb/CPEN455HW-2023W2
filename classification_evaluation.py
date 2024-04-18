@@ -38,9 +38,8 @@ def get_label(model, model_input, device):
             answers = answer.unsqueeze(1)
         else:
             answers = torch.cat((answers, answer.unsqueeze(1)), dim=1)
-    print(answers)
     answer = torch.argmin(answers, dim=1)
-    # print(answer)
+
 
     return answer
 # End of your code
