@@ -20,7 +20,7 @@ def my_sample(model, gen_data_dir, sample_batch_size = 25, obs = (3,32,32), samp
     for label in my_bidict:
         print(f"Label: {label}")
         #generate images for each label, each label has 25 images
-        labels = torch.tensor([label]*sample_batch_size)
+        labels = torch.tensor([my_bidict[label]]*sample_batch_size)
         labels = labels.to(device)
         sample_t = sample(model, labels, sample_batch_size, obs, sample_op)
         sample_t = rescaling_inv(sample_t)
@@ -39,8 +39,8 @@ if __name__ == "__main__":
         os.makedirs(gen_data_dir)
     #Begin of your code
     #Load your model and generate images in the gen_data_dir
-    model = PixelCNN(nr_resnet=1, nr_filters=40, input_channels=3, nr_logistic_mix=5)
-    model.load_state_dict(torch.load('models/conditional_pixelcnn.pth'))
+    model = PixelCNN(nr_resnet=2, nr_filters=40, input_channels=3, nr_logistic_mix=5)
+    # model.load_state_dict(torch.load('models/conditional_pixelcnn.pth'))
     model = model.to(device)
     model = model.eval()
     my_sample(model=model, gen_data_dir=gen_data_dir)
