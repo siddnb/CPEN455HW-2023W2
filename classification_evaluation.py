@@ -18,7 +18,7 @@ NUM_CLASSES = len(my_bidict)
 # Write your code here
 # And get the predicted label, which is a tensor of shape (batch_size,)
 # Begin of your code
-def get_label(model, model_input, device):
+def get_label(model, model_input, device, save_logits = False):
     # Run the model 4 times with the input and the 4 possible labels
     # Create a tensor of shape (batch_size, 4) with the output of the model
     # Get the index of the maximum value for each batch
@@ -29,7 +29,7 @@ def get_label(model, model_input, device):
     for _, label_num in my_bidict.items():
         categories = torch.tensor([label_num]*model_input.shape[0]).to(device)
         categories = categories.to(device)
-        
+
         model_output = model(model_input, categories)
         answer = image_discretized_mix_logistic_loss(model_input, model_output)
 
@@ -40,16 +40,18 @@ def get_label(model, model_input, device):
             answers = answer.unsqueeze(1)
         else:
             answers = torch.cat((answers, answer.unsqueeze(1)), dim=1)
+    logits = answers
     answer = torch.argmin(answers, dim=1)
 
-
-    return answer
+    if save_logits:
+        return answer, logits
+    else:
+        return answer
 # End of your code
 
 def classifier(model, data_loader, device):
     model.eval()
     acc_tracker = ratio_tracker()
-    print(len(data_loader.dataset[0]))
     for batch_idx, item in enumerate(tqdm(data_loader)):
         model_input, categories = item
         model_input = model_input.to(device)
@@ -64,18 +66,17 @@ def classifier(model, data_loader, device):
 '''Added code here to write to csv for submission'''
 def submit_classifier(model, data_loader, device, batch_size):
     write_to_csv = []
+    write_to_npy = []
     model.eval()
     acc_tracker = ratio_tracker()
-    print(len(data_loader.dataset))
     for batch_idx, item in enumerate(tqdm(data_loader)):
         model_input, categories = item
         model_input = model_input.to(device)
-        # original_label = [my_bidict[item] for item in categories]
-        # original_label = torch.tensor(original_label, dtype=torch.int64).to(device)
-        answer = get_label(model, model_input, device)
-        # correct_num = torch.sum(answer == original_label)
-        # acc_tracker.update(correct_num.item(), model_input.shape[0])
-        write_to_csv[batch_idx*batch_size:(batch_idx+1)*len(categories)] = answer.tolist()
+        
+        answer, logits = get_label(model, model_input, device, save_logits=True)
+        
+        write_to_csv[batch_idx*batch_size:(batch_idx+1)*batch_size] = answer.tolist()
+        write_to_npy[batch_idx*batch_size:(batch_idx+1)*batch_size] = logits.tolist()
     
     csv_file_path = 'submission.csv'
     with open(csv_file_path, 'w') as csvfile:
@@ -83,7 +84,7 @@ def submit_classifier(model, data_loader, device, batch_size):
             # Convert each element to a string and join them with commas
             # Write the row string to the file
             csvfile.write(' ,' + str(row) + '\n')
-    # return acc_tracker.get_ratio()
+    np.save('test_logits.npy', write_to_npy)
     return 0        
 
 if __name__ == '__main__':
@@ -107,7 +108,8 @@ if __name__ == '__main__':
                                                             mode = args.mode, 
                                                             transform=ds_transforms), 
                                              batch_size=args.batch_size, 
-                                             shuffle=True, 
+                                            #  shuffle=True, 
+                                            shuffle = False,
                                              **kwargs)
 
     #Write your code here
