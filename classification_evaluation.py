@@ -62,7 +62,7 @@ def classifier(model, data_loader, device):
     return acc_tracker.get_ratio()
 
 '''Added code here to write to csv for submission'''
-def submit_classifier(model, data_loader, device):
+def submit_classifier(model, data_loader, device, batch_size):
     write_to_csv = []
     model.eval()
     acc_tracker = ratio_tracker()
@@ -75,7 +75,7 @@ def submit_classifier(model, data_loader, device):
         answer = get_label(model, model_input, device)
         # correct_num = torch.sum(answer == original_label)
         # acc_tracker.update(correct_num.item(), model_input.shape[0])
-        write_to_csv[batch_idx*32:(batch_idx+1)*32] = answer.tolist()
+        write_to_csv[batch_idx*batch_size:(batch_idx+1)*len(categories)] = answer.tolist()
     
     csv_file_path = 'submission.csv'
     with open(csv_file_path, 'w') as csvfile:
@@ -122,7 +122,8 @@ if __name__ == '__main__':
     # model.load_state_dict(torch.load('models/conditional_pixelcnn.pth'))
     model.eval()
     print('model parameters loaded')
-    acc = submit_classifier(model = model, data_loader = dataloader, device = device)
+    # acc = classifier(model = model, data_loader = dataloader, device = device)
+    acc = submit_classifier(model = model, data_loader = dataloader, device = device, batch_size = args.batch_size)
     print(f"Accuracy: {acc}")
         
         
