@@ -49,6 +49,7 @@ def get_label(model, model_input, device):
 def classifier(model, data_loader, device):
     model.eval()
     acc_tracker = ratio_tracker()
+    print(len(data_loader.dataset[0]))
     for batch_idx, item in enumerate(tqdm(data_loader)):
         model_input, categories = item
         model_input = model_input.to(device)
@@ -59,7 +60,31 @@ def classifier(model, data_loader, device):
         acc_tracker.update(correct_num.item(), model_input.shape[0])
     
     return acc_tracker.get_ratio()
-        
+
+'''Added code here to write to csv for submission'''
+def submit_classifier(model, data_loader, device):
+    write_to_csv = []
+    model.eval()
+    acc_tracker = ratio_tracker()
+    print(len(data_loader.dataset))
+    for batch_idx, item in enumerate(tqdm(data_loader)):
+        model_input, categories = item
+        model_input = model_input.to(device)
+        # original_label = [my_bidict[item] for item in categories]
+        # original_label = torch.tensor(original_label, dtype=torch.int64).to(device)
+        answer = get_label(model, model_input, device)
+        # correct_num = torch.sum(answer == original_label)
+        # acc_tracker.update(correct_num.item(), model_input.shape[0])
+        write_to_csv[batch_idx*32:(batch_idx+1)*32] = answer.tolist()
+    
+    csv_file_path = 'submission.csv'
+    with open(csv_file_path, 'w') as csvfile:
+        for row in write_to_csv:
+            # Convert each element to a string and join them with commas
+            # Write the row string to the file
+            csvfile.write(' ,' + str(row) + '\n')
+    # return acc_tracker.get_ratio()
+    return 0        
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -94,10 +119,10 @@ if __name__ == '__main__':
     model = model.to(device)
     #Attention: the path of the model is fixed to 'models/conditional_pixelcnn.pth'
     #You should save your model to this path
-    model.load_state_dict(torch.load('models/conditional_pixelcnn.pth'))
+    # model.load_state_dict(torch.load('models/conditional_pixelcnn.pth'))
     model.eval()
     print('model parameters loaded')
-    acc = classifier(model = model, data_loader = dataloader, device = device)
+    acc = submit_classifier(model = model, data_loader = dataloader, device = device)
     print(f"Accuracy: {acc}")
         
         
